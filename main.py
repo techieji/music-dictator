@@ -2,10 +2,13 @@ import pyaudio
 import wave
 import time
 
+import numpy as np
+import scipy.fft as fft
+
 CHUNK = 1024
-FORMAT = pyaudio.paInt16
+FORMAT = pyaudio.paInt16    # 2 bytes
 CHANNELS = 1
-RATE = 44100
+RATE = 48000
 RECORD_SECONDS = 5
 WAVE_OUTPUT_FILENAME = "output.wav"
 
@@ -25,28 +28,21 @@ for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
     data = stream.read(CHUNK)
     frames.append(data)
 
-#t = time.time()
-#rec = time.time()
-#while time.time() - t < RECORD_SECONDS:
-#    if time.time() - rec > 0.5:
-#        print('.', end="", flush=True)
-#        data1 = stream.read(CHUNK)
-#        data2 = stream.read(CHUNK)
-#        data3 = stream.read(CHUNK)
-#        frames.extend([data1] * 7 + [data2] * 7 + [data3] * 7)
-#        rec = time.time()
-
 print("* done recording")
-
-print(frames[0])
 
 stream.stop_stream()
 stream.close()
 p.terminate()
 
-wf = wave.open(WAVE_OUTPUT_FILENAME, 'wb')
-wf.setnchannels(CHANNELS)
-wf.setsampwidth(p.get_sample_size(FORMAT))
-wf.setframerate(RATE)
-wf.writeframes(b''.join(frames))
-wf.close()
+if False:
+    wf = wave.open(WAVE_OUTPUT_FILENAME, 'wb')
+    wf.setnchannels(CHANNELS)
+    wf.setsampwidth(p.get_sample_size(FORMAT))
+    wf.setframerate(RATE)
+    wf.writeframes(b''.join(frames))
+    wf.close()
+
+_frames = b''.join(frames)
+frames = np.fromiter(map(lambda a, b: a*2**8 + b, _frames[::2], _frames[1::2]), dtype=np.int32, count=int(RATE / CHUNK * RECORD_SECONDS))
+# frames = np.fromiter(map(lambda a, b: int.from_bytes(bytes([a]) + bytes([b])), _frames[::2], _frames[1::2]), dtype=np.int32, count=int(RATE / CHUNK * RECORD_SECONDS))
+transform = fft.fft(frames)
