@@ -8,10 +8,18 @@ import time
 notes = 'a a# b c c# d d# e f f# g g#'.split()
 
 def frequency_to_note(f, a4=440):
-    s = 12 * np.log2(f/a4)
-    octave_diff = int(s // 12)
-    note_diff = int(s % 12)
-    return notes[note_diff] + str(octave_diff + 4)
+    if f != 0:
+        s = 12 * np.log2(f/a4)
+        octave_diff = int(s // 12)
+        note_diff = int(s % 12)
+        return notes[note_diff] + str(octave_diff + 4)
+    return '00'
+
+def autotune(f, a4=440):
+    if f != 0:
+        s = int(12 * np.log2(f/a4))
+        return pow(2, s/12) * a4
+    return 0
 
 CHUNK = 1024
 CHANNELS = 1
@@ -29,7 +37,7 @@ def get_freq(f, frame_count, volume=0.5, fs=RATE):
     return r
 
 def callback(in_data, frame_count, time_info, status_flags):
-    return (get_freq(FREQ, frame_count), pyaudio.paContinue)
+    return (get_freq(autotune(FREQ), frame_count), pyaudio.paContinue)
 
 p = pyaudio.PyAudio()
 stream = p.open(format=pyaudio.paInt16, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
@@ -46,10 +54,10 @@ try:
         freq = frequency.mean()
         conf = confidence.mean()
         if conf > 0.3:
-            print(frequency_to_note(freq), freq, conf, end='\r')
+            print(frequency_to_note(freq), freq, autotune(freq), end='\r')
             FREQ = freq
         else:
-            print(FREQ, 100 * ' ', end='\r')
+            print(frequency_to_note(FREQ), FREQ, 100 * ' ', end='\r')
 except KeyboardInterrupt:
     pass
 finally:
