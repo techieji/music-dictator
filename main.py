@@ -44,5 +44,12 @@ if False:
 
 _frames = b''.join(frames)
 frames = np.fromiter(map(lambda a, b: a*2**8 + b, _frames[::2], _frames[1::2]), dtype=np.int32, count=int(RATE / CHUNK * RECORD_SECONDS))
-# frames = np.fromiter(map(lambda a, b: int.from_bytes(bytes([a]) + bytes([b])), _frames[::2], _frames[1::2]), dtype=np.int32, count=int(RATE / CHUNK * RECORD_SECONDS))
-transform = fft.fft(frames)
+transform = fft.fft(frames)[1:]
+ind = abs(transform).argmax()
+print(ind * RATE / len(frames), abs(transform)[ind])
+
+from visdom import Visdom
+
+vis = Visdom()
+
+vis.line(abs(transform), np.array(range(1,len(transform)+1)) * RATE / len(transform))
