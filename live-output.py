@@ -2,6 +2,7 @@ import pyaudio
 import crepe
 import numpy as np
 import itertools as it
+import keyboard as kb
 
 import time
 
@@ -27,17 +28,31 @@ RATE = 48000    # 48 kHz
 TIME = 0.10     # 10 ms
 
 FREQ = 0
+FREEZE = False
+ADJUST = 1
+
+def toggle_freeze():
+    global FREEZE
+    FREEZE = not FREEZE
+
+def adjust_by(s):
+    global ADJUST
+    ADJUST *= pow(2, s/12)
+
+kb.add_hotkey('f', toggle_freeze)
+kb.add_hotkey('w', lambda: adjust_by(1))
+kb.add_hotkey('s', lambda: adjust_by(-1))
 
 forever = it.cycle(range(2**32))
 
-def get_freq(f, frame_count, volume=0.5, fs=RATE):
+def get_freq(f, frame_count, volume=0.25, fs=RATE):
     # r = (volume * (np.sin(2 * np.pi * np.arange(fs * duration) * f / fs)).astype(np.float32)).tobytes()
     x = np.fromiter(it.islice(forever, frame_count), dtype=np.float32)
     r = (volume * (np.sin(2 * np.pi * x * f / fs)).astype(np.float32)).tobytes()
     return r
 
 def callback(in_data, frame_count, time_info, status_flags):
-    return (get_freq(autotune(FREQ), frame_count), pyaudio.paContinue)
+    return (get_freq(autotune(FREQ * ADJUST), frame_count), pyaudio.paContinue)
 
 p = pyaudio.PyAudio()
 stream = p.open(format=pyaudio.paInt16, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
@@ -53,11 +68,15 @@ try:
         time, frequency, confidence, activation = crepe.predict(arr, RATE, viterbi=True, verbose=0)
         freq = frequency.mean()
         conf = confidence.mean()
-        if conf > 0.3:
+        if FREEZE:
+            freq = FREQ
+        if FREEZE:
+            print('f', frequency_to_note(freq), freq, 100 * ' ', end='\r')
+        elif conf > 0.3:
             print(frequency_to_note(freq), freq, autotune(freq), end='\r')
             FREQ = freq
         else:
-            print(frequency_to_note(FREQ), FREQ, 100 * ' ', end='\r')
+            print('?', frequency_to_note(FREQ), FREQ, 100 * ' ', end='\r')
 except KeyboardInterrupt:
     pass
 finally:
