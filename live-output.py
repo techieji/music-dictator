@@ -39,9 +39,26 @@ def adjust_by(s):
     global ADJUST
     ADJUST *= pow(2, s/12)
 
+def reset():
+    global ADJUST
+    global FREEZE
+    global FREQ
+    ADJUST = 1
+    FREQ = 0
+    FREEZE = False
+
+def log():
+    print()
+
 kb.add_hotkey('f', toggle_freeze)
 kb.add_hotkey('w', lambda: adjust_by(1))
 kb.add_hotkey('s', lambda: adjust_by(-1))
+kb.add_hotkey('i', lambda: adjust_by(0.25))
+kb.add_hotkey('k', lambda: adjust_by(-0.25))
+kb.add_hotkey('g', lambda: adjust_by(12))
+kb.add_hotkey('t', lambda: adjust_by(-12))
+kb.add_hotkey('r', reset)
+kb.add_hotkey('space', log)
 
 forever = it.cycle(range(2**32))
 
@@ -71,12 +88,12 @@ try:
         if FREEZE:
             freq = FREQ
         if FREEZE:
-            print('f', frequency_to_note(freq), freq, 100 * ' ', end='\r')
+            print('<f>', frequency_to_note(freq * ADJUST), freq, 100 * ' ', end='\r')
         elif conf > 0.3:
-            print(frequency_to_note(freq), freq, autotune(freq), end='\r')
+            print('<n>', frequency_to_note(freq * ADJUST), freq, 100 * ' ', end='\r')
             FREQ = freq
         else:
-            print('?', frequency_to_note(FREQ), FREQ, 100 * ' ', end='\r')
+            print('<?>', frequency_to_note(FREQ * ADJUST), FREQ, 100 * ' ', end='\r')
 except KeyboardInterrupt:
     pass
 finally:
